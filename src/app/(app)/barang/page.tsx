@@ -20,22 +20,22 @@ export default async function ItemsPage({
   return <>
     <div className="page-heading"><div><p className="eyebrow">MASTER DATA</p><h1>Data barang</h1><p className="muted">Daftar barang beserta stok yang tersedia.</p></div><span className="count-pill">{items.length} jenis barang</span></div>
     {user.role === "admin" && <div className="entry-grid">
-      <section className="card">
+      <section className="card border border-base-200 bg-base-100 shadow-sm">
         <div className="section-heading"><div><h2><PackagePlus size={19} /> Tambah barang</h2><p className="muted">Stok awal dicatat sebagai transaksi masuk agar ada riwayat.</p></div></div>
         <ItemForm categories={categories} />
       </section>
-      <section className="card">
+      <section className="card border border-base-200 bg-base-100 shadow-sm">
         <div className="section-heading"><div><h2>Kategori</h2><p className="muted">Kelompokkan barang agar mudah ditemukan.</p></div></div>
         <CategoryForm />
-        <div className="tags">{categories.length ? categories.map(c => <span className="tag" key={c.id}>{c.name}</span>) : <span className="muted">Belum ada kategori.</span>}</div>
+        <div className="tags">{categories.length ? categories.map(c => <span className="badge badge-ghost" key={c.id}>{c.name}</span>) : <span className="muted">Belum ada kategori.</span>}</div>
       </section>
     </div>}
-    <section className="card table-card">
+    <section className="card table-card border border-base-200 bg-base-100 shadow-sm">
       <div className="section-heading"><div><h2>Daftar inventaris</h2><p className="muted">Stok diperbarui otomatis dari transaksi.</p></div>
-        <form className="search-field" method="get"><Search size={17} /><input name="q" defaultValue={params.q ?? ""} placeholder="Cari kode, nama, kategori..." aria-label="Cari barang" /><button type="submit" className="sr-only">Cari</button></form>
+        <form className="search-field" method="get"><Search size={17} /><input className="input" name="q" defaultValue={params.q ?? ""} placeholder="Cari kode, nama, kategori..." aria-label="Cari barang" /><button type="submit" className="sr-only">Cari</button></form>
       </div>
-      <div className="table-scroll"><table><thead><tr><th>Kode</th><th>Nama barang</th><th>Kategori</th><th>Lokasi</th><th>Stok</th><th>Status</th></tr></thead>
-        <tbody>{filtered.map(item => <tr key={item.id}><td className="mono">{item.code}</td><td><strong>{item.name}</strong><small className="cell-note">{item.notes}</small></td><td>{item.category ?? "—"}</td><td>{item.location || "—"}</td><td><strong>{item.currentStock}</strong> {item.unit}</td><td><span className={`pill ${item.currentStock <= item.minStock ? "warning" : "ok"}`}>{item.currentStock <= item.minStock ? "Stok menipis" : "Tersedia"}</span></td></tr>)}</tbody>
+      <div className="table-scroll"><table className="table table-zebra"><thead><tr><th>Kode</th><th>Nama barang</th><th>Kategori</th><th>Lokasi</th><th>Stok</th><th>Status</th></tr></thead>
+        <tbody>{filtered.map(item => <tr key={item.id}><td className="mono">{item.code}</td><td><strong>{item.name}</strong><small className="cell-note">{item.notes}</small></td><td>{item.category ?? "—"}</td><td>{item.location || "—"}</td><td><strong>{item.currentStock}</strong> {item.unit}</td><td><span className={`badge ${item.currentStock <= item.minStock ? "badge-warning" : "badge-success"}`}>{item.currentStock <= item.minStock ? "Stok menipis" : "Tersedia"}</span></td></tr>)}</tbody>
       </table>{filtered.length === 0 && <p className="table-empty">Tidak ada barang yang cocok.</p>}</div>
     </section>
   </>;

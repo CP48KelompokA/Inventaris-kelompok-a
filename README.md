@@ -2,6 +2,10 @@
 
 Aplikasi inventaris berbasis web untuk tugas Capstone Project STSI4440. Stack: Next.js App Router, TypeScript, PostgreSQL Neon, Drizzle ORM, dan Vercel.
 
+## Antarmuka
+
+UI menggunakan Tailwind CSS 4 dan daisyUI 5 (tema `emerald`). Kelas daisyUI dipakai untuk kontrol formulir, tombol, kartu, badge, notifikasi, dan tabel. `src/app/globals.css` berisi tata letak aplikasi dan warna identitas sekolah yang digunakan bersama. Gunakan komponen dan token tema yang sudah ada saat menambah halaman agar tampilan tetap konsisten.
+
 ## Fitur awal
 
 - Akun administrator dan staf dengan sesi melalui cookie HTTP-only.

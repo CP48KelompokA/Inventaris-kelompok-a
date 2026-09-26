@@ -11,7 +11,7 @@ export default async function DashboardPage() {
     <>
       <div className="page-heading">
         <div><p className="eyebrow">DASHBOARD</p><h1>Ringkasan inventaris</h1><p className="muted">Gambaran stok dan aktivitas barang terkini.</p></div>
-        <Link className="button primary" href="/transaksi">Catat transaksi <ArrowUpRight size={17} /></Link>
+        <Link className="btn btn-primary" href="/transaksi">Catat transaksi <ArrowUpRight size={17} /></Link>
       </div>
       <div className="stats-grid">
         <Stat icon={<Boxes />} label="Jenis barang" value={items.length} note="Terdaftar dalam sistem" />
@@ -20,7 +20,7 @@ export default async function DashboardPage() {
         <Stat icon={<Repeat2 />} label="Aktivitas terbaru" value={recent.length} note="Ditampilkan di bawah" />
       </div>
       <div className="dashboard-grid">
-        <section className="card">
+        <section className="card border border-base-200 bg-base-100 shadow-sm">
           <div className="section-heading"><div><h2>Aktivitas terbaru</h2><p className="muted">Transaksi masuk dan keluar</p></div><Link href="/transaksi">Lihat semua</Link></div>
           {recent.length === 0 ? <Empty text="Belum ada transaksi barang." /> : (
             <div className="activity-list">
@@ -34,12 +34,12 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
-        <section className="card">
+        <section className="card border border-base-200 bg-base-100 shadow-sm">
           <div className="section-heading"><div><h2>Perlu perhatian</h2><p className="muted">Barang pada batas stok minimum</p></div></div>
           {lowStock.length === 0 ? <Empty text="Semua stok berada di atas batas minimum." /> : (
             <div className="attention-list">
               {lowStock.slice(0, 6).map((item) => (
-                <div key={item.id}><span><strong>{item.name}</strong><small>{item.code}</small></span><span className="pill warning">{item.currentStock} {item.unit}</span></div>
+                <div key={item.id}><span><strong>{item.name}</strong><small>{item.code}</small></span><span className="badge badge-warning">{item.currentStock} {item.unit}</span></div>
               ))}
             </div>
           )}
