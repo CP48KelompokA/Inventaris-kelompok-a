@@ -12,8 +12,9 @@ export default async function ItemsPage({
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q.trim().slice(0, 100) : "";
   const requestedPage = /^\d+$/.test(params.page ?? "") ? Number(params.page) : 1;
-  const [user, categories, locations, counts, result] = await Promise.all([
-    requireUser(), listCategories(), listLocations(), categoryItemCounts(),
+  const user = await requireUser();
+  const [categories, locations, counts, result] = await Promise.all([
+    listCategories(), listLocations(), categoryItemCounts(),
     searchItems(query, Number.isSafeInteger(requestedPage) ? requestedPage : 1),
   ]);
   const categoryCounts = new Map(counts.map(row => [row.id, row.total]));

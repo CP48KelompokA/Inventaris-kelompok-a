@@ -1,7 +1,9 @@
 import { Download } from "lucide-react";
 import { listItems } from "@/lib/inventory";
+import { requireUser } from "@/lib/auth";
 
 export default async function ReportsPage() {
+  await requireUser();
   const items = await listItems();
   const low = items.filter(item => item.currentStock <= item.minStock);
   return <>

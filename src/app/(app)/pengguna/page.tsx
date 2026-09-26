@@ -2,7 +2,8 @@ import { UserForm, UserManage } from "@/components/forms";
 import { listUsers, requireAdmin } from "@/lib/auth";
 
 export default async function UsersPage() {
-  const [users, admin] = await Promise.all([listUsers(), requireAdmin()]);
+  const admin = await requireAdmin();
+  const users = await listUsers();
   return <>
     <div className="page-heading"><div><p className="eyebrow">AKSES APLIKASI</p><h1>Pengguna</h1><p className="muted">Buat akun terpisah untuk setiap petugas inventaris.</p></div></div>
     <section className="card narrow-card border border-base-200 bg-base-100 shadow-sm"><div className="section-heading"><div><h2>Tambah pengguna</h2><p className="muted">Bagikan kata sandi awal langsung kepada pemilik akun.</p></div></div><UserForm /></section>

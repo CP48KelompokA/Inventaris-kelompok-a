@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Boxes, CircleAlert, PackageCheck, Repeat2 } from "lucide-react";
 import { inventorySummary, listMovements } from "@/lib/inventory";
 import { formatDate } from "@/lib/format";
+import { requireUser } from "@/lib/auth";
 
 export default async function DashboardPage() {
+  await requireUser();
   const [{ stats, low }, recent] = await Promise.all([inventorySummary(), listMovements(5)]);
   return (
     <>

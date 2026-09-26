@@ -28,8 +28,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const from = validDate(params.from);
   const to = validDate(params.to);
   const page = /^\d+$/.test(params.page ?? "") ? Math.max(1, Number(params.page)) : 1;
-  const [user, items, history] = await Promise.all([
-    requireUser(),
+  const user = await requireUser();
+  const [items, history] = await Promise.all([
     listItemOptions(),
     searchMovements({
       query: typeof params.q === "string" ? params.q.trim().slice(0, 100) : "",
