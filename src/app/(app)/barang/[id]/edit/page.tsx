@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { ItemDeleteForm, ItemForm } from "@/components/forms";
 import { requireAdmin } from "@/lib/auth";
-import { getItem, listCategories, listLocations } from "@/lib/inventory";
+import { getItem, itemHasHistory, listCategories, listLocations } from "@/lib/inventory";
 
 export default async function EditItemPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
@@ -13,6 +13,7 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     getItem(id), listCategories(), listLocations(),
   ]);
   if (!item) notFound();
+  const hasHistory = await itemHasHistory(id);
 
   return <>
     <div className="page-heading"><div><p className="eyebrow">MASTER DATA</p><h1>Edit barang</h1><p className="muted">{item.code} · {item.name}</p></div><Link className="btn btn-ghost" href="/barang">Kembali</Link></div>
@@ -20,9 +21,11 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
       <div className="section-heading"><div><h2>Informasi barang</h2><p className="muted">Stok saat ini {item.currentStock} {item.unit}. Stok diubah melalui Transaksi; kode barang tetap agar riwayat konsisten.</p></div></div>
       <ItemForm categories={categories} locations={locations} item={item} />
     </section>
-    {item.currentStock === 0 && <section className="card narrow-card border border-base-200 bg-base-100 shadow-sm mt-5">
-      <h2>Hapus barang</h2><p className="muted">Hanya barang tanpa stok dan tanpa riwayat transaksi yang boleh dihapus. Barang bersejarah tetap disimpan.</p>
-      <ItemDeleteForm item={item} />
-    </section>}
+    <section className="card narrow-card border border-base-200 bg-base-100 shadow-sm mt-5">
+      <h2>Hapus barang</h2><p className="muted">Penghapusan hanya tersedia bila stok nol dan belum ada riwayat transaksi.</p>
+      {item.currentStock === 0 && !hasHistory
+        ? <ItemDeleteForm item={item} />
+        : <p className="alert alert-info alert-soft">{hasHistory ? "Barang ini memiliki riwayat transaksi dan harus tetap tercatat." : "Kosongkan stok melalui transaksi keluar sebelum menghapus."}</p>}
+    </section>
   </>;
 }

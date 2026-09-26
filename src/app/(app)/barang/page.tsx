@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { PackagePlus, Search } from "lucide-react";
-import { CategoryForm, CategoryManage, ItemForm } from "@/components/forms";
+import { ItemForm } from "@/components/forms";
 import { requireUser } from "@/lib/auth";
-import { categoryItemCounts, listCategories, listLocations, searchItems } from "@/lib/inventory";
+import { listCategories, listLocations, searchItems } from "@/lib/inventory";
 
 export default async function ItemsPage({
   searchParams,
@@ -13,11 +13,10 @@ export default async function ItemsPage({
   const query = typeof params.q === "string" ? params.q.trim().slice(0, 100) : "";
   const requestedPage = /^\d+$/.test(params.page ?? "") ? Number(params.page) : 1;
   const user = await requireUser();
-  const [categories, locations, counts, result] = await Promise.all([
-    listCategories(), listLocations(), categoryItemCounts(),
+  const [categories, locations, result] = await Promise.all([
+    listCategories(), listLocations(),
     searchItems(query, Number.isSafeInteger(requestedPage) ? requestedPage : 1),
   ]);
-  const categoryCounts = new Map(counts.map(row => [row.id, row.total]));
 
   return <>
     <div className="page-heading"><div><p className="eyebrow">MASTER DATA</p><h1>Data barang</h1><p className="muted">Daftar barang beserta stok yang tersedia.</p></div><span className="count-pill">{result.total} jenis barang</span></div>
@@ -28,9 +27,10 @@ export default async function ItemsPage({
         {locations.length === 0 && <p className="muted">Belum ada lokasi? <Link href="/lokasi">Tambahkan lokasi</Link> agar barang dapat ditempatkan.</p>}
       </section>
       <section className="card border border-base-200 bg-base-100 shadow-sm">
-        <div className="section-heading"><div><h2>Kategori</h2><p className="muted">Kelompokkan barang agar mudah ditemukan.</p></div></div>
-        <CategoryForm />
-        <div className="form-stack">{categories.length ? categories.map(c => <div key={c.id} className="border-b border-base-200 pb-2"><CategoryManage category={c} itemCount={categoryCounts.get(c.id) ?? 0} /></div>) : <span className="muted">Belum ada kategori.</span>}</div>
+        <div className="section-heading"><div><h2>Kategori barang</h2><p className="muted">Kelola nama kategori terpisah dari formulir barang.</p></div></div>
+        <p className="muted">{categories.length} kategori tersedia.</p>
+        <div className="tags">{categories.slice(0, 6).map(category => <span className="badge badge-ghost" key={category.id}>{category.name}</span>)}</div>
+        <Link className="btn btn-outline btn-primary mt-5" href="/kategori">Kelola kategori</Link>
       </section>
     </div>}
     <section className="card table-card border border-base-200 bg-base-100 shadow-sm">

@@ -164,6 +164,33 @@ export async function getItem(id: string) {
   return item;
 }
 
+export async function itemHasHistory(id: string) {
+  const [movement] = await getDb().select({ id: movements.id }).from(movements)
+    .where(eq(movements.itemId, id)).limit(1);
+  return Boolean(movement);
+}
+
+export async function getMovement(id: string) {
+  const [movement] = await getDb().select({
+    id: movements.id,
+    type: movements.type,
+    quantity: movements.quantity,
+    note: movements.note,
+    createdAt: movements.createdAt,
+    reversalOf: movements.reversalOf,
+    reversed: sql<boolean>`exists (select 1 from movements reversal where reversal.reversal_of = ${movements.id})`,
+    itemCode: items.code,
+    itemName: items.name,
+    itemStock: items.currentStock,
+    unit: items.unit,
+    actorName: users.name,
+  }).from(movements)
+    .innerJoin(items, eq(movements.itemId, items.id))
+    .innerJoin(users, eq(movements.actorId, users.id))
+    .where(eq(movements.id, id));
+  return movement;
+}
+
 export async function listMovements(limit = 100) {
   return getDb()
     .select({

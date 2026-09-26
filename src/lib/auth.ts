@@ -78,6 +78,14 @@ export async function listUsers() {
     .from(users);
 }
 
+export async function getUserForAdmin(id: string) {
+  await requireAdmin();
+  const [user] = await getDb().select({ id: users.id, name: users.name,
+    email: users.email, role: users.role, active: users.active })
+    .from(users).where(eq(users.id, id));
+  return user;
+}
+
 export async function addUser(input: {
   name: string;
   email: string;

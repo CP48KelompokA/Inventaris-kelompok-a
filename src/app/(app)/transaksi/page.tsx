@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
-import { MovementForm, ReverseMovementForm } from "@/components/forms";
+import { MovementForm } from "@/components/forms";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { listItemOptions, searchMovements } from "@/lib/inventory";
@@ -55,7 +55,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         <div className="form-footer"><button className="btn btn-primary" type="submit"><Search size={16} /> Terapkan</button><Link className="btn btn-ghost" href="/transaksi">Reset</Link></div>
       </form>
       <div className="table-scroll"><table className="table table-zebra"><thead><tr><th>Waktu</th><th>Barang</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th>Dicatat oleh</th>{user.role === "admin" && <th>Aksi</th>}</tr></thead>
-        <tbody>{history.rows.map(row => <tr key={row.id}><td>{formatDate(row.createdAt)}</td><td><strong>{row.itemName}</strong><small className="cell-note mono">{row.itemCode}</small></td><td><span className={`movement-label ${row.type}`}>{row.type === "in" ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}{row.type === "in" ? "Masuk" : "Keluar"}</span></td><td><strong>{row.type === "in" ? "+" : "−"}{row.quantity}</strong></td><td>{row.note || "—"}{row.reversalOf && <small className="cell-note">Entri koreksi</small>}{row.reversed && <small className="cell-note">Sudah dibalik</small>}</td><td>{row.actorName}</td>{user.role === "admin" && <td>{!row.reversalOf && !row.reversed && <ReverseMovementForm id={row.id} />}</td>}</tr>)}</tbody>
+        <tbody>{history.rows.map(row => <tr key={row.id}><td>{formatDate(row.createdAt)}</td><td><strong>{row.itemName}</strong><small className="cell-note mono">{row.itemCode}</small></td><td><span className={`movement-label ${row.type}`}>{row.type === "in" ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}{row.type === "in" ? "Masuk" : "Keluar"}</span></td><td><strong>{row.type === "in" ? "+" : "−"}{row.quantity}</strong></td><td>{row.note || "—"}{row.reversalOf && <small className="cell-note">Entri koreksi</small>}{row.reversed && <small className="cell-note">Sudah dibalik</small>}</td><td>{row.actorName}</td>{user.role === "admin" && <td>{!row.reversalOf && !row.reversed && <Link className="btn btn-ghost btn-sm" href={`/transaksi/${row.id}/koreksi`}>Koreksi</Link>}</td>}</tr>)}</tbody>
       </table>{history.rows.length === 0 && <p className="table-empty">Tidak ada transaksi yang cocok.</p>}</div>
       {history.pages > 1 && <div className="flex items-center justify-between gap-4 pt-4">
         <span className="muted">Halaman {history.page} dari {history.pages}</span>

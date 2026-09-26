@@ -6,7 +6,7 @@ import { z } from "zod";
 import { addUser, changePassword, resetUserPassword, setUserActive, signIn, signOut, requireAdmin, requireUser, updateUser } from "@/lib/auth";
 import { addCategory, addItem, addLocation, deleteCategory, deleteItem, deleteLocation, recordMovement, reverseMovement, updateCategory, updateItem, updateLocation } from "@/lib/inventory";
 
-export type FormState = { error: string; success: string };
+export type FormState = { error: string; success: string; revision?: number };
 
 const loginSchema = z.object({
   email: z.email(),
@@ -97,6 +97,7 @@ export async function categoryAction(_state: FormState, form: FormData): Promise
   if (!parsed.success) return { error: "Nama kategori minimal 2 karakter.", success: "" };
   try {
     await addCategory(parsed.data.name);
+    revalidatePath("/kategori");
     revalidatePath("/barang");
     return { error: "", success: "Kategori berhasil ditambahkan." };
   } catch (error) {
@@ -111,6 +112,7 @@ export async function updateCategoryAction(_state: FormState, form: FormData): P
   if (!id.success || !parsed.success) return { error: "Nama kategori harus 2–80 karakter.", success: "" };
   try {
     await updateCategory(id.data, parsed.data.name);
+    revalidatePath("/kategori");
     revalidatePath("/barang");
     revalidatePath("/laporan");
     return { error: "", success: "Kategori diperbarui." };
@@ -123,6 +125,7 @@ export async function deleteCategoryAction(_state: FormState, form: FormData): P
   if (!id.success) return { error: "Kategori tidak valid.", success: "" };
   try {
     await deleteCategory(id.data);
+    revalidatePath("/kategori");
     revalidatePath("/barang");
     return { error: "", success: "Kategori kosong berhasil dihapus." };
   } catch (error) { return { error: actionError(error), success: "" }; }
@@ -217,7 +220,7 @@ export async function deleteItemAction(_state: FormState, form: FormData): Promi
   redirect("/barang");
 }
 
-export async function movementAction(_state: FormState, form: FormData): Promise<FormState> {
+export async function movementAction(state: FormState, form: FormData): Promise<FormState> {
   const actor = await requireUser();
   const parsed = movementSchema.safeParse(values(form));
   if (!parsed.success) return { error: "Pilih barang dan isi jumlah yang valid.", success: "" };
@@ -227,7 +230,7 @@ export async function movementAction(_state: FormState, form: FormData): Promise
     revalidatePath("/barang");
     revalidatePath("/transaksi");
     revalidatePath("/laporan");
-    return { error: "", success: "Transaksi stok berhasil dicatat." };
+    return { error: "", success: "Transaksi stok berhasil dicatat.", revision: (state.revision ?? 0) + 1 };
   } catch (error) {
     return { error: actionError(error), success: "" };
   }
@@ -241,6 +244,7 @@ export async function reverseMovementAction(_state: FormState, form: FormData): 
   try {
     await reverseMovement(id.data, admin.id, reason.data);
     for (const path of ["/", "/barang", "/transaksi", "/laporan"]) revalidatePath(path);
+    revalidatePath(`/transaksi/${id.data}/koreksi`);
     return { error: "", success: "Transaksi dibalik; catatan asli tetap tersimpan." };
   } catch (error) { return { error: actionError(error), success: "" }; }
 }
@@ -266,6 +270,7 @@ export async function updateUserAction(_state: FormState, form: FormData): Promi
   try {
     await updateUser(id.data, admin.id, parsed.data);
     revalidatePath("/pengguna");
+    revalidatePath(`/pengguna/${id.data}`);
     return { error: "", success: "Pengguna diperbarui." };
   } catch (error) { return { error: actionError(error), success: "" }; }
 }
@@ -278,6 +283,7 @@ export async function userStatusAction(_state: FormState, form: FormData): Promi
   try {
     await setUserActive(id.data, admin.id, active.data === "true");
     revalidatePath("/pengguna");
+    revalidatePath(`/pengguna/${id.data}`);
     return { error: "", success: active.data === "true" ? "Akun diaktifkan." : "Akun dinonaktifkan." };
   } catch (error) { return { error: actionError(error), success: "" }; }
 }

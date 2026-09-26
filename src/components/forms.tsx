@@ -1,14 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   categoryAction, itemAction, locationAction, loginAction, movementAction, passwordAction,
   deleteCategoryAction, deleteItemAction, deleteLocationAction, resetUserPasswordAction,
   reverseMovementAction, updateCategoryAction, updateItemAction, updateLocationAction,
   updateUserAction, userAction, userStatusAction,
 } from "@/app/actions";
+import type { FormState } from "@/app/actions";
 
-const initialFormState = { error: "", success: "" };
+const initialFormState: FormState = { error: "", success: "" };
+
+function useResetOnSuccess(state: typeof initialFormState) {
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => { if (state.success) formRef.current?.reset(); }, [state]);
+  return formRef;
+}
 
 function Feedback({ error, success }: { error: string; success: string }) {
   if (error) return <p className="form-feedback alert alert-error alert-soft" role="alert">{error}</p>;
@@ -28,7 +35,8 @@ export function LoginForm() {
 
 export function CategoryForm() {
   const [state, action, pending] = useActionState(categoryAction, initialFormState);
-  return <form action={action} className="form-inline">
+  const formRef = useResetOnSuccess(state);
+  return <form ref={formRef} action={action} className="form-inline">
     <label className="sr-only" htmlFor="category-name">Nama kategori</label>
     <input className="input" id="category-name" name="name" required minLength={2} maxLength={80} placeholder="Contoh: Peralatan kelas" />
     <button className="btn btn-outline btn-primary" disabled={pending}>Tambah</button>
@@ -46,13 +54,16 @@ export function CategoryManage({ category, itemCount }: { category: { id: string
       <button className="btn btn-ghost btn-sm" disabled={pending}>Simpan</button>
       <Feedback {...state} />
     </form>
-    {itemCount === 0 && <DeleteForm id={category.id} action={deleteCategoryAction} label="Hapus kategori" name={category.name} />}
+    {itemCount === 0
+      ? <DeleteForm id={category.id} action={deleteCategoryAction} label="Hapus kategori" name={category.name} />
+      : <span className="muted">Kosongkan kategori dari barang sebelum menghapus.</span>}
   </div>;
 }
 
 export function LocationForm() {
   const [state, action, pending] = useActionState(locationAction, initialFormState);
-  return <form action={action} className="form-inline">
+  const formRef = useResetOnSuccess(state);
+  return <form ref={formRef} action={action} className="form-inline">
     <label className="sr-only" htmlFor="location-name">Nama lokasi</label>
     <input className="input" id="location-name" name="name" required minLength={2} maxLength={120} placeholder="Contoh: Ruang guru" />
     <button className="btn btn-outline btn-primary" disabled={pending}>Tambah</button>
@@ -78,11 +89,14 @@ export function DeleteForm({ id, action, label, name }: {
   name: string;
 }) {
   const [state, submit, pending] = useActionState(action, initialFormState);
-  return <form action={submit} onSubmit={event => {
-    if (!window.confirm(`Yakin ingin menghapus ${name}? Tindakan ini tidak dapat dibatalkan.`)) event.preventDefault();
-  }}>
+  const [confirming, setConfirming] = useState(false);
+  return <form action={submit} className="confirm-actions">
     <input type="hidden" name="id" value={id} />
-    <button className="btn btn-error btn-outline btn-sm" disabled={pending}>{pending ? "Menghapus..." : label}</button>
+    {confirming ? <>
+      <span role="alert" className="muted">Hapus {name} secara permanen?</span>
+      <button type="submit" className="btn btn-error btn-sm" disabled={pending}>{pending ? "Menghapus..." : "Ya, hapus"}</button>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirming(false)} disabled={pending}>Batal</button>
+    </> : <button type="button" className="btn btn-error btn-outline btn-sm" onClick={() => setConfirming(true)}>{label}</button>}
     <Feedback {...state} />
   </form>;
 }
@@ -112,7 +126,8 @@ export function ItemForm({ categories, locations, item }: {
   item?: ItemFields;
 }) {
   const [state, action, pending] = useActionState(item ? updateItemAction : itemAction, initialFormState);
-  return <form action={action} className="form-grid">
+  const formRef = useResetOnSuccess(item ? initialFormState : state);
+  return <form ref={formRef} action={action} className="form-grid">
     {item && <input type="hidden" name="id" value={item.id} />}
     <label>Kode barang<input className="input" name="code" required minLength={2} maxLength={40} defaultValue={item?.code} readOnly={Boolean(item)} placeholder="BRG-001" /></label>
     <label>Nama barang<input className="input" name="name" required minLength={2} maxLength={160} defaultValue={item?.name} placeholder="Contoh: Proyektor" /></label>
@@ -128,17 +143,34 @@ export function ItemForm({ categories, locations, item }: {
 export function MovementForm({ items }: { items: { id: string; code: string; name: string; currentStock: number; unit: string }[] }) {
   const [state, action, pending] = useActionState(movementAction, initialFormState);
   return <form action={action} className="form-grid">
-    <label className="span-2">Barang<select className="select" name="itemId" required defaultValue=""><option value="" disabled>Pilih barang</option>{items.map(item => <option key={item.id} value={item.id}>{item.code} · {item.name} (stok {item.currentStock} {item.unit})</option>)}</select></label>
-    <label>Jenis transaksi<select className="select" name="type" defaultValue="in"><option value="in">Barang masuk</option><option value="out">Barang keluar</option></select></label>
-    <label>Jumlah<input className="input" name="quantity" type="number" min="1" step="1" required placeholder="0" /></label>
-    <label className="span-2">Keterangan<textarea className="textarea" name="note" rows={2} maxLength={500} placeholder="Contoh: Penerimaan barang / pemakaian ruang" /></label>
-    <div className="span-2 form-footer"><Feedback {...state} /><button className="btn btn-primary" disabled={pending}>{pending ? "Mencatat..." : "Catat transaksi"}</button></div>
+    <MovementFields key={state.revision ?? 0} items={items} pending={pending} />
+    <div className="span-2"><Feedback {...state} /></div>
   </form>;
+}
+
+function MovementFields({ items, pending }: {
+  items: { id: string; code: string; name: string; currentStock: number; unit: string }[];
+  pending: boolean;
+}) {
+  const [selectedId, setSelectedId] = useState("");
+  const [type, setType] = useState<"in" | "out">("in");
+  const selected = items.find(item => item.id === selectedId);
+  const noStock = type === "out" && selected?.currentStock === 0;
+  return <>
+    <label className="span-2">Barang<select className="select" name="itemId" required value={selectedId} onChange={event => setSelectedId(event.target.value)}><option value="" disabled>Pilih barang</option>{items.map(item => <option key={item.id} value={item.id}>{item.code} · {item.name} (stok {item.currentStock} {item.unit})</option>)}</select></label>
+    <label>Jenis transaksi<select className="select" name="type" value={type} onChange={event => setType(event.target.value as "in" | "out")}><option value="in">Barang masuk</option><option value="out">Barang keluar</option></select></label>
+    <label>Jumlah<input className="input" name="quantity" type="number" min="1" max={type === "out" ? selected?.currentStock : undefined} step="1" required placeholder="0" /></label>
+    {selected && <p className="span-2 muted m-0" role="status">Stok saat ini: {selected.currentStock} {selected.unit}.{type === "out" ? " Jumlah keluar tidak boleh melebihi stok." : ""}</p>}
+    {noStock && <p className="span-2 form-feedback alert alert-warning alert-soft" role="alert">Barang ini belum memiliki stok untuk dikeluarkan.</p>}
+    <label className="span-2">Keterangan<textarea className="textarea" name="note" rows={2} maxLength={500} placeholder="Contoh: Penerimaan barang / pemakaian ruang" /></label>
+    <div className="span-2 form-footer"><button className="btn btn-primary" disabled={pending || noStock}>{pending ? "Mencatat..." : "Catat transaksi"}</button></div>
+  </>;
 }
 
 export function UserForm() {
   const [state, action, pending] = useActionState(userAction, initialFormState);
-  return <form action={action} className="form-grid">
+  const formRef = useResetOnSuccess(state);
+  return <form ref={formRef} action={action} className="form-grid">
     <label>Nama<input className="input" name="name" minLength={2} maxLength={120} required placeholder="Nama staf" /></label>
     <label>Email<input className="input" name="email" type="email" required placeholder="nama@sekolah.sch.id" /></label>
     <label>Peran<select className="select" name="role" defaultValue="staff"><option value="staff">Staf</option><option value="admin">Administrator</option></select></label>
@@ -147,57 +179,65 @@ export function UserForm() {
   </form>;
 }
 
-export function UserManage({ user, currentUserId }: {
+export function UserEditForms({ user, currentUserId }: {
   user: { id: string; name: string; role: "admin" | "staff"; active: boolean };
   currentUserId: string;
 }) {
   const [editState, edit, editPending] = useActionState(updateUserAction, initialFormState);
   const [statusState, status, statusPending] = useActionState(userStatusAction, initialFormState);
   const [resetState, reset, resetPending] = useActionState(resetUserPasswordAction, initialFormState);
-  return <details><summary className="btn btn-ghost btn-sm">Kelola</summary>
-    <div className="form-stack min-w-56 pt-3">
+  const resetRef = useResetOnSuccess(resetState);
+  const [confirmingStatus, setConfirmingStatus] = useState(false);
+  return <div className="management-grid">
+    <section className="card border border-base-200 bg-base-100 shadow-sm">
+      <h2>Profil dan peran</h2><p className="muted">Ubah nama atau hak akses petugas.</p>
       <form action={edit} className="form-stack">
         <input type="hidden" name="id" value={user.id} />
         <label>Nama<input className="input" name="name" defaultValue={user.name} minLength={2} maxLength={120} required /></label>
         <label>Peran<select className="select" name="role" defaultValue={user.role} disabled={user.id === currentUserId}><option value="admin">Administrator</option><option value="staff">Staf</option></select></label>
         {user.id === currentUserId && <input type="hidden" name="role" value="admin" />}
-        <button className="btn btn-outline btn-sm" disabled={editPending}>Simpan profil</button><Feedback {...editState} />
+        {user.id === currentUserId && <p className="muted m-0">Peran akun sendiri tidak dapat diturunkan.</p>}
+        <div><button className="btn btn-primary" disabled={editPending}>{editPending ? "Menyimpan..." : "Simpan perubahan"}</button></div><Feedback {...editState} />
       </form>
-      {user.id !== currentUserId && <>
-        <form action={status} onSubmit={event => {
-          if (!user.active && !window.confirm(`Aktifkan kembali ${user.name}?`)) event.preventDefault();
-          if (user.active && !window.confirm(`Nonaktifkan ${user.name}? Sesi dan login berikutnya akan ditolak.`)) event.preventDefault();
-        }}>
+    </section>
+    {user.id !== currentUserId && <div className="form-stack management-side">
+      <section className="card border border-base-200 bg-base-100 shadow-sm">
+        <h2>Status akun</h2><p className="muted">Akun nonaktif tidak dapat masuk atau menggunakan sesi lama.</p>
+        <form action={status} className="form-stack">
           <input type="hidden" name="id" value={user.id} /><input type="hidden" name="active" value={String(!user.active)} />
-          <button className={`btn btn-sm ${user.active ? "btn-warning btn-outline" : "btn-success btn-outline"}`} disabled={statusPending}>{user.active ? "Nonaktifkan" : "Aktifkan"}</button>
+          {confirmingStatus ? <div className="confirm-actions">
+            <span role="alert" className="muted">{user.active ? `Nonaktifkan ${user.name} sekarang?` : `Aktifkan ${user.name} kembali?`}</span>
+            <button type="submit" className={`btn ${user.active ? "btn-warning" : "btn-success"}`} disabled={statusPending}>{statusPending ? "Memproses..." : "Ya, lanjutkan"}</button>
+            <button type="button" className="btn btn-ghost" onClick={() => setConfirmingStatus(false)} disabled={statusPending}>Batal</button>
+          </div> : <div><button type="button" className={`btn ${user.active ? "btn-warning" : "btn-success"}`} onClick={() => setConfirmingStatus(true)}>{user.active ? "Nonaktifkan akun" : "Aktifkan akun"}</button></div>}
           <Feedback {...statusState} />
         </form>
-        <form action={reset} className="form-stack">
+      </section>
+      <section className="card border border-base-200 bg-base-100 shadow-sm">
+        <h2>Reset kata sandi</h2><p className="muted">Berikan kata sandi baru langsung kepada pemilik akun.</p>
+        <form ref={resetRef} action={reset} className="form-stack">
           <input type="hidden" name="id" value={user.id} />
-          <label>Reset kata sandi<input className="input" name="password" type="password" minLength={12} maxLength={128} required autoComplete="new-password" /></label>
-          <button className="btn btn-outline btn-sm" disabled={resetPending}>Reset kata sandi</button><Feedback {...resetState} />
+          <label>Kata sandi baru<input className="input" name="password" type="password" minLength={12} maxLength={128} required autoComplete="new-password" /></label>
+          <div><button className="btn btn-outline" disabled={resetPending}>Reset kata sandi</button></div><Feedback {...resetState} />
         </form>
-      </>}
-    </div>
-  </details>;
+      </section>
+    </div>}
+  </div>;
 }
 
 export function ReverseMovementForm({ id }: { id: string }) {
   const [state, action, pending] = useActionState(reverseMovementAction, initialFormState);
-  return <details><summary className="btn btn-ghost btn-sm">Koreksi</summary>
-    <form action={action} className="form-stack min-w-56 pt-3" onSubmit={event => {
-      if (!window.confirm("Buat transaksi pembalik? Riwayat asli tetap ada.")) event.preventDefault();
-    }}>
+  return <form action={action} className="form-stack">
       <input type="hidden" name="id" value={id} />
       <label>Alasan koreksi<textarea className="textarea" name="reason" minLength={5} maxLength={450} required placeholder="Alasan pembatalan transaksi" /></label>
-      <button className="btn btn-warning btn-sm" disabled={pending}>Buat koreksi</button><Feedback {...state} />
-    </form>
-  </details>;
+      <div><button className="btn btn-warning" disabled={pending}>{pending ? "Mencatat koreksi..." : "Konfirmasi koreksi"}</button></div><Feedback {...state} />
+    </form>;
 }
 
 export function PasswordForm() {
   const [state, action, pending] = useActionState(passwordAction, initialFormState);
-  return <form action={action} className="form-stack">
+  const formRef = useResetOnSuccess(state);
+  return <form ref={formRef} action={action} className="form-stack">
     <label>Kata sandi saat ini<input className="input" name="currentPassword" type="password" required autoComplete="current-password" /></label>
     <label>Kata sandi baru<input className="input" name="nextPassword" type="password" required minLength={12} autoComplete="new-password" /></label>
     <label>Ulangi kata sandi baru<input className="input" name="confirmPassword" type="password" required minLength={12} autoComplete="new-password" /></label>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Boxes, LayoutDashboard, MapPin, Repeat2, Users } from "lucide-react";
+import { BarChart3, Boxes, LayoutDashboard, MapPin, Repeat2, Tags, Users } from "lucide-react";
 
 const links = [
   { href: "/", label: "Ringkasan", icon: LayoutDashboard },
@@ -14,13 +14,13 @@ const links = [
 export function AppNav({ role, mobile = false }: { role: "admin" | "staff"; mobile?: boolean }) {
   const pathname = usePathname();
   const visibleLinks = role === "admin"
-    ? [...links, { href: "/lokasi", label: "Lokasi", icon: MapPin }, { href: "/pengguna", label: "Pengguna", icon: Users }]
+    ? [...links, { href: "/kategori", label: "Kategori", icon: Tags }, { href: "/lokasi", label: "Lokasi", icon: MapPin }, { href: "/pengguna", label: "Pengguna", icon: Users }]
     : links;
 
   return (
     <nav className={mobile ? "mobile-nav" : "sidebar-nav"} aria-label={mobile ? "Navigasi seluler" : "Navigasi utama"}>
       {visibleLinks.map(({ href, label, icon: Icon }) => (
-        <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>
+        <Link key={href} href={href} aria-current={pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ? "page" : undefined}>
           {!mobile && <Icon size={19} aria-hidden="true" />}
           {label}
         </Link>
