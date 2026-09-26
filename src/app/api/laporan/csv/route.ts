@@ -13,7 +13,7 @@ export async function GET() {
   const items = await listItems();
   const rows = [
     ["Kode", "Nama barang", "Kategori", "Lokasi", "Stok", "Satuan", "Stok minimum"],
-    ...items.map(item => [item.code, item.name, item.category ?? "", item.location, item.currentStock, item.unit, item.minStock]),
+    ...items.map(item => [item.code, item.name, item.category ?? "", item.location ?? "", item.currentStock, item.unit, item.minStock]),
   ];
   const csv = "\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n");
   return new Response(csv, {

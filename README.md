@@ -9,9 +9,9 @@ UI menggunakan Tailwind CSS 4 dan daisyUI 5 (tema `emerald`). Kelas daisyUI dipa
 ## Fitur awal
 
 - Akun administrator dan staf dengan sesi melalui cookie HTTP-only.
-- Kategori dan katalog barang dengan kode unik, lokasi, satuan, dan batas stok minimum.
+- Kategori, master lokasi, dan katalog barang dengan kode unik, satuan, dan batas stok minimum. Admin dapat mengubah data barang tanpa mengubah stok.
 - Pencatatan barang masuk dan keluar. Perubahan stok serta riwayat disimpan dalam satu transaksi database; pengeluaran tidak boleh melebihi stok.
-- Ringkasan, pencarian barang, riwayat transaksi, indikator stok minimum, dan laporan CSV.
+- Ringkasan, pencarian barang, riwayat transaksi dengan pencarian/filter/paginasi, indikator stok minimum, dan laporan CSV.
 - Admin dapat membuat akun staf. Pengguna dapat mengganti kata sandinya sendiri.
 
 ## Struktur
@@ -33,6 +33,8 @@ UI menggunakan Tailwind CSS 4 dan daisyUI 5 (tema `emerald`). Kelas daisyUI dipa
 7. Jalankan `npm run dev` dan buka `http://localhost:3000`.
 
 Perintah pemeriksaan: `npm run typecheck`, `npm run lint`, `npm run build`. Perubahan skema: `npm run db:generate`, tinjau SQL baru, lalu `npm run db:migrate` pada branch yang sesuai. Jangan menggunakan `db:push` di production.
+
+Migrasi `0002` menambahkan master lokasi dan memindahkan nama lokasi lama ke relasi baru. Kolom teks lama tetap disimpan sementara untuk keamanan rollback. Uji migrasi pada branch Neon terpisah sebelum menerapkannya di production.
 
 ## Asumsi yang perlu dikonfirmasi dengan sekolah
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Boxes, LayoutDashboard, Repeat2, Users } from "lucide-react";
+import { BarChart3, Boxes, LayoutDashboard, MapPin, Repeat2, Users } from "lucide-react";
 
 const links = [
   { href: "/", label: "Ringkasan", icon: LayoutDashboard },
@@ -14,7 +14,7 @@ const links = [
 export function AppNav({ role, mobile = false }: { role: "admin" | "staff"; mobile?: boolean }) {
   const pathname = usePathname();
   const visibleLinks = role === "admin"
-    ? [...links, { href: "/pengguna", label: "Pengguna", icon: Users }]
+    ? [...links, { href: "/lokasi", label: "Lokasi", icon: MapPin }, { href: "/pengguna", label: "Pengguna", icon: Users }]
     : links;
 
   return (

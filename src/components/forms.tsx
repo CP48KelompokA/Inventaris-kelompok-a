@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import {
-  categoryAction, itemAction, loginAction, movementAction, passwordAction, userAction,
+  categoryAction, itemAction, locationAction, loginAction, movementAction, passwordAction,
+  updateItemAction, updateLocationAction, userAction,
 } from "@/app/actions";
 
 const initialFormState = { error: "", success: "" };
@@ -33,17 +34,54 @@ export function CategoryForm() {
   </form>;
 }
 
-export function ItemForm({ categories }: { categories: { id: string; name: string }[] }) {
-  const [state, action, pending] = useActionState(itemAction, initialFormState);
+export function LocationForm() {
+  const [state, action, pending] = useActionState(locationAction, initialFormState);
+  return <form action={action} className="form-inline">
+    <label className="sr-only" htmlFor="location-name">Nama lokasi</label>
+    <input className="input" id="location-name" name="name" required minLength={2} maxLength={120} placeholder="Contoh: Ruang guru" />
+    <button className="btn btn-outline btn-primary" disabled={pending}>Tambah</button>
+    <Feedback {...state} />
+  </form>;
+}
+
+export function LocationRenameForm({ location }: { location: { id: string; name: string } }) {
+  const [state, action, pending] = useActionState(updateLocationAction, initialFormState);
+  return <form action={action} className="form-inline">
+    <input type="hidden" name="id" value={location.id} />
+    <label className="sr-only" htmlFor={`location-${location.id}`}>Nama lokasi {location.name}</label>
+    <input className="input" id={`location-${location.id}`} name="name" required minLength={2} maxLength={120} defaultValue={location.name} />
+    <button className="btn btn-ghost btn-sm" disabled={pending}>{pending ? "Menyimpan..." : "Simpan"}</button>
+    <Feedback {...state} />
+  </form>;
+}
+
+type ItemFields = {
+  id: string;
+  code: string;
+  name: string;
+  categoryId: string | null;
+  locationId: string | null;
+  unit: string;
+  minStock: number;
+  notes: string;
+};
+
+export function ItemForm({ categories, locations, item }: {
+  categories: { id: string; name: string }[];
+  locations: { id: string; name: string }[];
+  item?: ItemFields;
+}) {
+  const [state, action, pending] = useActionState(item ? updateItemAction : itemAction, initialFormState);
   return <form action={action} className="form-grid">
-    <label>Kode barang<input className="input" name="code" required maxLength={40} placeholder="BRG-001" /></label>
-    <label>Nama barang<input className="input" name="name" required maxLength={160} placeholder="Contoh: Proyektor" /></label>
-    <label>Kategori<select className="select" name="categoryId" defaultValue=""><option value="">Tanpa kategori</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-    <label>Lokasi<input className="input" name="location" maxLength={120} placeholder="Contoh: Ruang guru" /></label>
-    <label>Satuan<input className="input" name="unit" required defaultValue="unit" maxLength={30} /></label>
-    <label>Stok minimum<input className="input" name="minStock" type="number" min="0" defaultValue="0" required /></label>
-    <label className="span-2">Catatan<textarea className="textarea" name="notes" rows={2} maxLength={500} placeholder="Keterangan tambahan (opsional)" /></label>
-    <div className="span-2 form-footer"><Feedback {...state} /><button className="btn btn-primary" disabled={pending}>{pending ? "Menyimpan..." : "Simpan barang"}</button></div>
+    {item && <input type="hidden" name="id" value={item.id} />}
+    <label>Kode barang<input className="input" name="code" required minLength={2} maxLength={40} defaultValue={item?.code} readOnly={Boolean(item)} placeholder="BRG-001" /></label>
+    <label>Nama barang<input className="input" name="name" required minLength={2} maxLength={160} defaultValue={item?.name} placeholder="Contoh: Proyektor" /></label>
+    <label>Kategori<select className="select" name="categoryId" defaultValue={item?.categoryId ?? ""}><option value="">Tanpa kategori</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+    <label>Lokasi<select className="select" name="locationId" defaultValue={item?.locationId ?? ""}><option value="">Belum ditentukan</option>{locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
+    <label>Satuan<input className="input" name="unit" required defaultValue={item?.unit ?? "unit"} maxLength={30} /></label>
+    <label>Stok minimum<input className="input" name="minStock" type="number" min="0" step="1" defaultValue={item?.minStock ?? 0} required /></label>
+    <label className="span-2">Catatan<textarea className="textarea" name="notes" rows={2} maxLength={500} defaultValue={item?.notes} placeholder="Keterangan tambahan (opsional)" /></label>
+    <div className="span-2 form-footer"><Feedback {...state} /><button className="btn btn-primary" disabled={pending}>{pending ? "Menyimpan..." : item ? "Simpan perubahan" : "Simpan barang"}</button></div>
   </form>;
 }
 

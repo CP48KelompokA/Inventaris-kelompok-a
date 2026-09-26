@@ -27,12 +27,20 @@ export const categories = pgTable("categories", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const locations = pgTable("locations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const items = pgTable("items", {
   id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
   categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
-  location: text("location").notNull().default(""),
+  // Kept for rollback compatibility; new writes use locationId.
+  legacyLocation: text("location").notNull().default(""),
+  locationId: uuid("location_id").references(() => locations.id, { onDelete: "restrict" }),
   unit: text("unit").notNull().default("unit"),
   minStock: integer("min_stock").notNull().default(0),
   currentStock: integer("current_stock").notNull().default(0),

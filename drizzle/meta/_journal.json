@@ -15,6 +15,13 @@
       "when": 1790409543933,
       "tag": "0001_vengeful_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790416584242,
+      "tag": "0002_broken_mantis",
+      "breakpoints": true
     }
   ]
 }

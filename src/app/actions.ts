@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addUser, changePassword, signIn, signOut, requireAdmin, requireUser } from "@/lib/auth";
-import { addCategory, addItem, recordMovement } from "@/lib/inventory";
+import { addCategory, addItem, addLocation, recordMovement, updateItem, updateLocation } from "@/lib/inventory";
 
 export type FormState = { error: string; success: string };
 
@@ -15,11 +15,14 @@ const loginSchema = z.object({
 const categorySchema = z.object({
   name: z.string().trim().min(2).max(80),
 });
+const locationSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+});
 const itemSchema = z.object({
   code: z.string().trim().min(2).max(40).regex(/^[a-zA-Z0-9._-]+$/),
   name: z.string().trim().min(2).max(160),
   categoryId: z.union([z.uuid(), z.literal("")]),
-  location: z.string().trim().max(120),
+  locationId: z.union([z.uuid(), z.literal("")]),
   unit: z.string().trim().min(1).max(30),
   minStock: z.coerce.number<number>().int().min(0),
   notes: z.string().trim().max(500),
@@ -51,6 +54,7 @@ function values(form: FormData) {
 function actionError(error: unknown) {
   const code = (error as { code?: string })?.code;
   if (code === "23505") return "Kode atau nama sudah digunakan.";
+  if (code === "23503") return "Kategori atau lokasi yang dipilih tidak tersedia.";
   return error instanceof Error ? error.message : "Terjadi kesalahan. Silakan coba lagi.";
 }
 
@@ -85,15 +89,67 @@ export async function categoryAction(_state: FormState, form: FormData): Promise
   }
 }
 
+export async function locationAction(_state: FormState, form: FormData): Promise<FormState> {
+  await requireAdmin();
+  const parsed = locationSchema.safeParse(values(form));
+  if (!parsed.success) return { error: "Nama lokasi harus 2–120 karakter.", success: "" };
+  try {
+    await addLocation(parsed.data.name);
+    revalidatePath("/lokasi");
+    revalidatePath("/barang");
+    return { error: "", success: "Lokasi berhasil ditambahkan." };
+  } catch (error) {
+    return { error: actionError(error), success: "" };
+  }
+}
+
+export async function updateLocationAction(_state: FormState, form: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = z.uuid().safeParse(form.get("id"));
+  const parsed = locationSchema.safeParse(values(form));
+  if (!id.success || !parsed.success) return { error: "Nama lokasi harus 2–120 karakter.", success: "" };
+  try {
+    await updateLocation(id.data, parsed.data.name);
+    revalidatePath("/lokasi");
+    revalidatePath("/barang");
+    revalidatePath("/laporan");
+    return { error: "", success: "Lokasi berhasil diperbarui." };
+  } catch (error) {
+    return { error: actionError(error), success: "" };
+  }
+}
+
 export async function itemAction(_state: FormState, form: FormData): Promise<FormState> {
   await requireAdmin();
   const parsed = itemSchema.safeParse(values(form));
   if (!parsed.success) return { error: "Periksa kembali data barang dan kode uniknya.", success: "" };
   try {
-    await addItem({ ...parsed.data, categoryId: parsed.data.categoryId || null });
+    await addItem({ ...parsed.data, categoryId: parsed.data.categoryId || null, locationId: parsed.data.locationId || null });
     revalidatePath("/barang");
     revalidatePath("/");
     return { error: "", success: "Barang berhasil ditambahkan." };
+  } catch (error) {
+    return { error: actionError(error), success: "" };
+  }
+}
+
+export async function updateItemAction(_state: FormState, form: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = z.uuid().safeParse(form.get("id"));
+  const parsed = itemSchema.safeParse(values(form));
+  if (!id.success || !parsed.success) return { error: "Periksa kembali data barang.", success: "" };
+  try {
+    await updateItem(id.data, {
+      ...parsed.data,
+      categoryId: parsed.data.categoryId || null,
+      locationId: parsed.data.locationId || null,
+    });
+    revalidatePath("/barang");
+    revalidatePath(`/barang/${id.data}/edit`);
+    revalidatePath("/laporan");
+    revalidatePath("/transaksi");
+    revalidatePath("/");
+    return { error: "", success: "Barang berhasil diperbarui. Stok tidak berubah." };
   } catch (error) {
     return { error: actionError(error), success: "" };
   }
