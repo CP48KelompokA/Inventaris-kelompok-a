@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx scripts/seed-admin.ts"
+    "db:seed": "tsx --env-file=.env scripts/seed-admin.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
