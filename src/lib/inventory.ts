@@ -1,7 +1,8 @@
-import { and, asc, count, desc, eq, gte, ilike, lt, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { categories, items, locations, movements, users } from "@/db/schema";
 import { nextStock, opposite } from "@/lib/stock-rules";
+import { PAGE_SIZE, pageBounds } from "@/lib/pagination";
 
 export type NewItem = {
   code: string;
@@ -17,9 +18,20 @@ export async function listCategories() {
   return getDb().select().from(categories).orderBy(asc(categories.name));
 }
 
-export async function categoryItemCounts() {
+export async function searchCategories(query: string, requestedPage: number) {
+  const db = getDb();
+  const where = query ? ilike(categories.name, `%${query}%`) : undefined;
+  const [{ total }] = await db.select({ total: count() }).from(categories).where(where);
+  const { page, pages, offset } = pageBounds(total, requestedPage);
+  const rows = await db.select().from(categories).where(where)
+    .orderBy(asc(categories.name), asc(categories.id)).limit(PAGE_SIZE).offset(offset);
+  return { rows, total, page, pages };
+}
+
+export async function categoryItemCounts(ids: string[]) {
+  if (!ids.length) return [];
   return getDb().select({ id: items.categoryId, total: count() }).from(items)
-    .where(sql`${items.categoryId} IS NOT NULL`).groupBy(items.categoryId);
+    .where(inArray(items.categoryId, ids)).groupBy(items.categoryId);
 }
 
 export async function addCategory(name: string) {
@@ -50,9 +62,20 @@ export async function listLocations() {
   return getDb().select().from(locations).orderBy(asc(locations.name));
 }
 
-export async function locationItemCounts() {
+export async function searchLocations(query: string, requestedPage: number) {
+  const db = getDb();
+  const where = query ? ilike(locations.name, `%${query}%`) : undefined;
+  const [{ total }] = await db.select({ total: count() }).from(locations).where(where);
+  const { page, pages, offset } = pageBounds(total, requestedPage);
+  const rows = await db.select().from(locations).where(where)
+    .orderBy(asc(locations.name), asc(locations.id)).limit(PAGE_SIZE).offset(offset);
+  return { rows, total, page, pages };
+}
+
+export async function locationItemCounts(ids: string[]) {
+  if (!ids.length) return [];
   return getDb().select({ id: items.locationId, total: count() }).from(items)
-    .where(sql`${items.locationId} IS NOT NULL`).groupBy(items.locationId);
+    .where(inArray(items.locationId, ids)).groupBy(items.locationId);
 }
 
 export async function addLocation(name: string) {
@@ -126,24 +149,27 @@ export async function searchItems(query: string, requestedPage: number) {
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .leftJoin(locations, eq(items.locationId, locations.id));
   const [{ total }] = await base.where(where);
-  const pageSize = 20;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const page = Math.min(Math.max(1, requestedPage), pages);
+  const { page, pages, offset } = pageBounds(total, requestedPage);
   const rows = await db.select(itemColumns).from(items)
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .leftJoin(locations, eq(items.locationId, locations.id))
     .where(where).orderBy(asc(items.name), asc(items.id))
-    .limit(pageSize).offset((page - 1) * pageSize);
+    .limit(PAGE_SIZE).offset(offset);
   return { rows, total, page, pages };
 }
 
-export async function inventorySummary() {
-  const db = getDb();
-  const [stats] = await db.select({
+export async function inventoryTotals() {
+  const [stats] = await getDb().select({
     totalItems: count(),
     totalUnits: sql<number>`coalesce(sum(${items.currentStock}), 0)::integer`,
     lowStock: sql<number>`count(*) filter (where ${items.currentStock} <= ${items.minStock})::integer`,
   }).from(items);
+  return stats;
+}
+
+export async function inventorySummary() {
+  const db = getDb();
+  const stats = await inventoryTotals();
   const low = await db.select({ id: items.id, code: items.code, name: items.name,
     currentStock: items.currentStock, unit: items.unit }).from(items)
     .where(sql`${items.currentStock} <= ${items.minStock}`)
@@ -237,9 +263,7 @@ export async function searchMovements(filters: MovementFilters) {
   const [{ total }] = await db.select({ total: count() }).from(movements)
     .innerJoin(items, eq(movements.itemId, items.id))
     .innerJoin(users, eq(movements.actorId, users.id)).where(where);
-  const pageSize = 20;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const page = Math.min(filters.page, pages);
+  const { page, pages, offset } = pageBounds(total, filters.page);
   const rows = await db.select({
     id: movements.id,
     type: movements.type,
@@ -256,7 +280,7 @@ export async function searchMovements(filters: MovementFilters) {
     .innerJoin(users, eq(movements.actorId, users.id))
     .where(where)
     .orderBy(desc(movements.createdAt), desc(movements.id))
-    .limit(pageSize).offset((page - 1) * pageSize);
+    .limit(PAGE_SIZE).offset(offset);
   return { rows, page, pages, total };
 }
 

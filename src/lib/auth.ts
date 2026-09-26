@@ -1,11 +1,12 @@
 import { compare, hash } from "bcryptjs";
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, or, sql } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
+import { PAGE_SIZE, pageBounds } from "@/lib/pagination";
 
 const COOKIE_NAME = "inventaris_session";
 const SESSION_AGE = 60 * 60 * 8;
@@ -71,11 +72,17 @@ export async function requireAdmin() {
   return user;
 }
 
-export async function listUsers() {
+export async function searchUsers(query: string, requestedPage: number) {
   await requireAdmin();
-  return getDb()
+  const db = getDb();
+  const where = query ? or(ilike(users.name, `%${query}%`), ilike(users.email, `%${query}%`)) : undefined;
+  const [{ total }] = await db.select({ total: count() }).from(users).where(where);
+  const { page, pages, offset } = pageBounds(total, requestedPage);
+  const rows = await db
     .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active })
-    .from(users);
+    .from(users).where(where).orderBy(asc(users.name), asc(users.id))
+    .limit(PAGE_SIZE).offset(offset);
+  return { rows, total, page, pages };
 }
 
 export async function getUserForAdmin(id: string) {
