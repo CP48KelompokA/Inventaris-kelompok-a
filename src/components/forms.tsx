@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import {
-  categoryAction, itemAction, loginAction, movementAction, userAction,
+  categoryAction, itemAction, loginAction, movementAction, passwordAction, userAction,
 } from "@/app/actions";
 
 const initialFormState = { error: "", success: "" };
@@ -66,5 +66,16 @@ export function UserForm() {
     <label>Peran<select name="role" defaultValue="staff"><option value="staff">Staf</option><option value="admin">Administrator</option></select></label>
     <label>Kata sandi awal<input name="password" type="password" minLength={12} maxLength={128} required autoComplete="new-password" /></label>
     <div className="span-2 form-footer"><Feedback {...state} /><button className="button primary" disabled={pending}>{pending ? "Membuat..." : "Buat akun"}</button></div>
+  </form>;
+}
+
+export function PasswordForm() {
+  const [state, action, pending] = useActionState(passwordAction, initialFormState);
+  return <form action={action} className="form-stack">
+    <label>Kata sandi saat ini<input name="currentPassword" type="password" required autoComplete="current-password" /></label>
+    <label>Kata sandi baru<input name="nextPassword" type="password" required minLength={12} autoComplete="new-password" /></label>
+    <label>Ulangi kata sandi baru<input name="confirmPassword" type="password" required minLength={12} autoComplete="new-password" /></label>
+    <Feedback {...state} />
+    <button className="button primary" disabled={pending}>{pending ? "Menyimpan..." : "Ganti kata sandi"}</button>
   </form>;
 }

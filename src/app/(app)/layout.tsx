@@ -27,10 +27,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {user.role === "admin" && <Link href="/pengguna"><Users size={19} />Pengguna</Link>}
         </nav>
         <div className="sidebar-bottom">
-          <div className="user-chip">
+          <Link href="/akun" className="user-chip">
             <span className="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
             <span><strong>{user.name}</strong><small>{user.role === "admin" ? "Administrator" : "Staf"}</small></span>
-          </div>
+          </Link>
           <form action={logoutAction}><button className="text-button" type="submit">Keluar akun</button></form>
         </div>
       </aside>
@@ -42,6 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <nav className="mobile-nav" aria-label="Navigasi seluler">
           {links.map(({ href, label }) => <Link key={href} href={href}>{label}</Link>)}
           {user.role === "admin" && <Link href="/pengguna">Pengguna</Link>}
+          <Link href="/akun">Akun</Link>
         </nav>
         <main className="page-content">{children}</main>
       </div>

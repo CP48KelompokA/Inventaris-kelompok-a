@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addUser, signIn, signOut, requireAdmin, requireUser } from "@/lib/auth";
+import { addUser, changePassword, signIn, signOut, requireAdmin, requireUser } from "@/lib/auth";
 import { addCategory, addItem, recordMovement } from "@/lib/inventory";
 
 export type FormState = { error: string; success: string };
@@ -35,6 +35,13 @@ const userSchema = z.object({
   email: z.email(),
   password: z.string().min(12).max(128),
   role: z.enum(["admin", "staff"]),
+});
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1),
+  nextPassword: z.string().min(12).max(128),
+  confirmPassword: z.string().min(1),
+}).refine(data => data.nextPassword === data.confirmPassword, {
+  message: "Konfirmasi kata sandi tidak cocok.",
 });
 
 function values(form: FormData) {
@@ -116,6 +123,18 @@ export async function userAction(_state: FormState, form: FormData): Promise<For
     await addUser(parsed.data);
     revalidatePath("/pengguna");
     return { error: "", success: "Akun pengguna berhasil dibuat." };
+  } catch (error) {
+    return { error: actionError(error), success: "" };
+  }
+}
+
+export async function passwordAction(_state: FormState, form: FormData): Promise<FormState> {
+  await requireUser();
+  const parsed = passwordSchema.safeParse(values(form));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Periksa kata sandi baru.", success: "" };
+  try {
+    await changePassword(parsed.data.currentPassword, parsed.data.nextPassword);
+    return { error: "", success: "Kata sandi berhasil diperbarui." };
   } catch (error) {
     return { error: actionError(error), success: "" };
   }

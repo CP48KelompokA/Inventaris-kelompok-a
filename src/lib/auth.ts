@@ -91,3 +91,14 @@ export async function addUser(input: {
     role: input.role,
   });
 }
+
+export async function changePassword(currentPassword: string, nextPassword: string) {
+  const session = await requireUser();
+  const [user] = await getDb().select().from(users).where(eq(users.id, session.id));
+  if (!user || !(await compare(currentPassword, user.passwordHash))) {
+    throw new Error("Kata sandi saat ini salah.");
+  }
+  await getDb().update(users)
+    .set({ passwordHash: await hash(nextPassword, 12) })
+    .where(eq(users.id, user.id));
+}

@@ -8,7 +8,7 @@ Aplikasi inventaris berbasis web untuk tugas Capstone Project STSI4440. Stack: N
 - Kategori dan katalog barang dengan kode unik, lokasi, satuan, dan batas stok minimum.
 - Pencatatan barang masuk dan keluar. Perubahan stok serta riwayat disimpan dalam satu transaksi database; pengeluaran tidak boleh melebihi stok.
 - Ringkasan, pencarian barang, riwayat transaksi, indikator stok minimum, dan laporan CSV.
-- Admin dapat membuat akun staf. Staf dapat mencatat transaksi dan melihat data/laporan.
+- Admin dapat membuat akun staf. Pengguna dapat mengganti kata sandinya sendiri.
 
 ## Struktur
 
@@ -36,4 +36,4 @@ Rancangan awal ini memperlakukan satu kode barang sebagai **jenis barang dengan 
 
 ## Batas versi awal
 
-Belum ada alur koreksi transaksi, penghapusan barang, perubahan profil/kata sandi oleh pengguna, lampiran bukti, atau audit perubahan data master. Riwayat transaksi tidak menyediakan tombol hapus agar jejak stok tetap terlacak. Admin pertama dibuat melalui seed, lalu admin dapat menambahkan akun staf dari aplikasi.
+Belum ada alur koreksi transaksi, penghapusan barang, perubahan profil selain kata sandi, lampiran bukti, atau audit perubahan data master. Riwayat transaksi tidak menyediakan tombol hapus agar jejak stok tetap terlacak. Admin pertama dibuat melalui seed, lalu admin dapat menambahkan akun staf dari aplikasi.
