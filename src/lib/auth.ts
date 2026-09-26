@@ -1,6 +1,7 @@
 import { compare, hash } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
@@ -19,7 +20,7 @@ function sessionKey() {
 
 export async function signIn(email: string, password: string) {
   const [user] = await getDb().select().from(users).where(eq(users.email, email.toLowerCase()));
-  if (!user || !(await compare(password, user.passwordHash))) return false;
+  if (!user || !user.active || !(await compare(password, user.passwordHash))) return false;
 
   const token = await new SignJWT({ role: user.role })
     .setProtectedHeader({ alg: "HS256" })
@@ -42,7 +43,7 @@ export async function signOut() {
   (await cookies()).delete(COOKIE_NAME);
 }
 
-export async function currentUser() {
+export const currentUser = cache(async function currentUser() {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
@@ -51,12 +52,12 @@ export async function currentUser() {
     const [user] = await getDb()
       .select({ id: users.id, email: users.email, name: users.name, role: users.role })
       .from(users)
-      .where(eq(users.id, payload.sub));
+      .where(and(eq(users.id, payload.sub), eq(users.active, true)));
     return user ?? null;
   } catch {
     return null;
   }
-}
+});
 
 export async function requireUser() {
   const user = await currentUser();
@@ -73,7 +74,7 @@ export async function requireAdmin() {
 export async function listUsers() {
   await requireAdmin();
   return getDb()
-    .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active })
     .from(users);
 }
 
@@ -90,6 +91,43 @@ export async function addUser(input: {
     passwordHash: await hash(input.password, 12),
     role: input.role,
   });
+}
+
+export async function updateUser(id: string, actorId: string, input: { name: string; role: "admin" | "staff" }) {
+  await getDb().transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(48, 1)`);
+    const [target] = await tx.select().from(users).where(eq(users.id, id));
+    if (!target) throw new Error("Pengguna tidak ditemukan.");
+    if (id === actorId && input.role !== "admin") throw new Error("Anda tidak dapat menurunkan peran sendiri.");
+    if (target.active && target.role === "admin" && input.role !== "admin") {
+      const [{ total }] = await tx.select({ total: count() }).from(users)
+        .where(and(eq(users.role, "admin"), eq(users.active, true)));
+      if (total <= 1) throw new Error("Minimal satu administrator aktif harus tersedia.");
+    }
+    await tx.update(users).set(input).where(eq(users.id, id));
+  });
+}
+
+export async function setUserActive(id: string, actorId: string, active: boolean) {
+  if (id === actorId) throw new Error("Anda tidak dapat menonaktifkan akun sendiri.");
+  await getDb().transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(48, 1)`);
+    const [target] = await tx.select().from(users).where(eq(users.id, id));
+    if (!target) throw new Error("Pengguna tidak ditemukan.");
+    if (!active && target.active && target.role === "admin") {
+      const [{ total }] = await tx.select({ total: count() }).from(users)
+        .where(and(eq(users.role, "admin"), eq(users.active, true)));
+      if (total <= 1) throw new Error("Minimal satu administrator aktif harus tersedia.");
+    }
+    await tx.update(users).set({ active }).where(eq(users.id, id));
+  });
+}
+
+export async function resetUserPassword(id: string, actorId: string, password: string) {
+  if (id === actorId) throw new Error("Gunakan halaman Akun untuk mengganti kata sandi sendiri.");
+  const [updated] = await getDb().update(users).set({ passwordHash: await hash(password, 12) })
+    .where(eq(users.id, id)).returning({ id: users.id });
+  if (!updated) throw new Error("Pengguna tidak ditemukan.");
 }
 
 export async function changePassword(currentPassword: string, nextPassword: string) {

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
-import { MovementForm } from "@/components/forms";
+import { MovementForm, ReverseMovementForm } from "@/components/forms";
+import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { listItems, searchMovements } from "@/lib/inventory";
+import { listItemOptions, searchMovements } from "@/lib/inventory";
 
 type HistoryParams = { q?: string; type?: string; from?: string; to?: string; page?: string };
 
@@ -27,8 +28,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const from = validDate(params.from);
   const to = validDate(params.to);
   const page = /^\d+$/.test(params.page ?? "") ? Math.max(1, Number(params.page)) : 1;
-  const [items, history] = await Promise.all([
-    listItems(),
+  const [user, items, history] = await Promise.all([
+    requireUser(),
+    listItemOptions(),
     searchMovements({
       query: typeof params.q === "string" ? params.q.trim().slice(0, 100) : "",
       type: params.type === "in" || params.type === "out" ? params.type : undefined,
@@ -52,8 +54,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         <label>Sampai tanggal<input className="input" type="date" name="to" defaultValue={params.to ?? ""} /></label>
         <div className="form-footer"><button className="btn btn-primary" type="submit"><Search size={16} /> Terapkan</button><Link className="btn btn-ghost" href="/transaksi">Reset</Link></div>
       </form>
-      <div className="table-scroll"><table className="table table-zebra"><thead><tr><th>Waktu</th><th>Barang</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th>Dicatat oleh</th></tr></thead>
-        <tbody>{history.rows.map(row => <tr key={row.id}><td>{formatDate(row.createdAt)}</td><td><strong>{row.itemName}</strong><small className="cell-note mono">{row.itemCode}</small></td><td><span className={`movement-label ${row.type}`}>{row.type === "in" ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}{row.type === "in" ? "Masuk" : "Keluar"}</span></td><td><strong>{row.type === "in" ? "+" : "−"}{row.quantity}</strong></td><td>{row.note || "—"}</td><td>{row.actorName}</td></tr>)}</tbody>
+      <div className="table-scroll"><table className="table table-zebra"><thead><tr><th>Waktu</th><th>Barang</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th>Dicatat oleh</th>{user.role === "admin" && <th>Aksi</th>}</tr></thead>
+        <tbody>{history.rows.map(row => <tr key={row.id}><td>{formatDate(row.createdAt)}</td><td><strong>{row.itemName}</strong><small className="cell-note mono">{row.itemCode}</small></td><td><span className={`movement-label ${row.type}`}>{row.type === "in" ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}{row.type === "in" ? "Masuk" : "Keluar"}</span></td><td><strong>{row.type === "in" ? "+" : "−"}{row.quantity}</strong></td><td>{row.note || "—"}{row.reversalOf && <small className="cell-note">Entri koreksi</small>}{row.reversed && <small className="cell-note">Sudah dibalik</small>}</td><td>{row.actorName}</td>{user.role === "admin" && <td>{!row.reversalOf && !row.reversed && <ReverseMovementForm id={row.id} />}</td>}</tr>)}</tbody>
       </table>{history.rows.length === 0 && <p className="table-empty">Tidak ada transaksi yang cocok.</p>}</div>
       {history.pages > 1 && <div className="flex items-center justify-between gap-4 pt-4">
         <span className="muted">Halaman {history.page} dari {history.pages}</span>

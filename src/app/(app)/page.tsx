@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, Boxes, CircleAlert, PackageCheck, Repeat2 } from "lucide-react";
-import { listItems, listMovements } from "@/lib/inventory";
+import { inventorySummary, listMovements } from "@/lib/inventory";
 import { formatDate } from "@/lib/format";
 
 export default async function DashboardPage() {
-  const [items, recent] = await Promise.all([listItems(), listMovements(5)]);
-  const lowStock = items.filter((item) => item.currentStock <= item.minStock);
-  const totalUnits = items.reduce((sum, item) => sum + item.currentStock, 0);
+  const [{ stats, low }, recent] = await Promise.all([inventorySummary(), listMovements(5)]);
   return (
     <>
       <div className="page-heading">
@@ -14,9 +12,9 @@ export default async function DashboardPage() {
         <Link className="btn btn-primary" href="/transaksi">Catat transaksi <ArrowUpRight size={17} /></Link>
       </div>
       <div className="stats-grid">
-        <Stat icon={<Boxes />} label="Jenis barang" value={items.length} note="Terdaftar dalam sistem" />
-        <Stat icon={<PackageCheck />} label="Total unit" value={totalUnits} note="Stok tersedia saat ini" />
-        <Stat icon={<CircleAlert />} label="Stok menipis" value={lowStock.length} note="Perlu diperhatikan" warning />
+        <Stat icon={<Boxes />} label="Jenis barang" value={stats.totalItems} note="Terdaftar dalam sistem" />
+        <Stat icon={<PackageCheck />} label="Total unit" value={stats.totalUnits} note="Stok tersedia saat ini" />
+        <Stat icon={<CircleAlert />} label="Stok menipis" value={stats.lowStock} note="Perlu diperhatikan" warning />
         <Stat icon={<Repeat2 />} label="Aktivitas terbaru" value={recent.length} note="Ditampilkan di bawah" />
       </div>
       <div className="dashboard-grid">
@@ -36,9 +34,9 @@ export default async function DashboardPage() {
         </section>
         <section className="card border border-base-200 bg-base-100 shadow-sm">
           <div className="section-heading"><div><h2>Perlu perhatian</h2><p className="muted">Barang pada batas stok minimum</p></div></div>
-          {lowStock.length === 0 ? <Empty text="Semua stok berada di atas batas minimum." /> : (
+          {low.length === 0 ? <Empty text="Semua stok berada di atas batas minimum." /> : (
             <div className="attention-list">
-              {lowStock.slice(0, 6).map((item) => (
+              {low.map((item) => (
                 <div key={item.id}><span><strong>{item.name}</strong><small>{item.code}</small></span><span className="badge badge-warning">{item.currentStock} {item.unit}</span></div>
               ))}
             </div>
